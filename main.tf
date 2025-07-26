@@ -1,9 +1,5 @@
 # VPC + EC2 with Modules
 
-provider "aws" {
-  region = "us-west-2"  # or your preferred region
-}
-
 # VPC using official module
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
