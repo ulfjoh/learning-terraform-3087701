@@ -15,7 +15,6 @@ data "aws_ami" "app_ami" {
 }
 
 data "aws_vpc" "default" {
-  name    = "blog"
   default = true
 }
 
