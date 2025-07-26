@@ -2,10 +2,6 @@ output "instance_ami" {
   value = aws_instance.blog.ami
 }
 
-output "instance_arn" {
-  value = aws_instance.blog.arn
-}
-
 output "instance_id" {
   description = "The ID of the EC2 instance"
   value       = aws_instance.blog.id
