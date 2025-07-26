@@ -29,7 +29,7 @@ output "instance_az" {
 
 output "security_group_id" {
   description = "The ID of the security group"
-  value       = aws_security_group.blog_sg.id
+  value       = module.blog_sg.security_group_id
 }
 
 output "instance_public_dns" {
