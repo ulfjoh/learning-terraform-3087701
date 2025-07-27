@@ -103,7 +103,7 @@ module "blog_alb" {
       target_type = "instance"
       
       target_autoscaling_group = {
-        name = module.autoscaling.autoscaling_group_name
+        name = module.blog_autoscaling.autoscaling_group_name
       }
     }
   }
