@@ -54,7 +54,7 @@ data "aws_ami" "app_ami" {
 # Auto Scaling Group using module v7.6.0
 module "blog_autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
-  version = "7.6.0"
+  version = "8.6.0"
 
   name                = "blog_asg"
   min_size            = 1
