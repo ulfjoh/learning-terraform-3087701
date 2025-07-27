@@ -1,4 +1,6 @@
-# VPC
+# main.tf
+
+# VPC using official module
 module "blog_vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.1.2"
@@ -15,7 +17,7 @@ module "blog_vpc" {
   }
 }
 
-# Security Group
+# Security Group using official module
 module "blog_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "5.3.0"
@@ -61,23 +63,23 @@ resource "aws_launch_template" "blog" {
 
   tag_specifications {
     resource_type = "instance"
-
     tags = {
       Name = "HelloWorld"
     }
   }
 }
 
-# Autoscaling Group using launch template
+# Auto Scaling Group
 module "blog_autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
   version = "9.0.1"
 
-  name                   = "blog_asg"
-  min_size               = 1
-  max_size               = 1
-  desired_capacity       = 1
-  vpc_zone_identifier    = module.blog_vpc.public_subnets
+  name                = "blog_asg"
+  min_size            = 1
+  max_size            = 1
+  desired_capacity    = 1
+  vpc_zone_identifier = module.blog_vpc.public_subnets
+
   create_launch_template = false
   launch_template_name   = aws_launch_template.blog.name
 
@@ -86,7 +88,7 @@ module "blog_autoscaling" {
   }
 }
 
-# ALB
+# Application Load Balancer
 module "blog_alb" {
   source  = "terraform-aws-modules/alb/aws"
   version = "9.6.0"
@@ -97,18 +99,11 @@ module "blog_alb" {
   security_groups = [module.blog_sg.security_group_id]
 
   target_groups = {
-    asg = {
+    instance = {
       name_prefix = "blog-"
       protocol    = "HTTP"
       port        = 80
       target_type = "instance"
-
-      targets = {
-        asg = {
-          type = "autoscaling_group"
-          name = module.blog_autoscaling.autoscaling_group_name
-        }
-      }
     }
   }
 
@@ -116,8 +111,8 @@ module "blog_alb" {
     http = {
       port     = 80
       protocol = "HTTP"
-      forward  = {
-        target_group_key = "asg"
+      forward = {
+        target_group_key = "instance"
       }
     }
   }
@@ -125,4 +120,10 @@ module "blog_alb" {
   tags = {
     Environment = "dev"
   }
+}
+
+# Attach ASG to ALB target group
+resource "aws_autoscaling_attachment" "asg_attachment" {
+  autoscaling_group_name = module.blog_autoscaling.autoscaling_group_name
+  lb_target_group_arn    = module.blog_alb.target_group_arns[0]
 }
