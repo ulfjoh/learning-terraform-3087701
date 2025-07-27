@@ -1,43 +1,15 @@
-output "instance_ami" {
-  value = aws_instance.blog.ami
-}
-
-output "instance_id" {
-  description = "The ID of the EC2 instance"
-  value       = aws_instance.blog.id
-}
-
-output "instance_arn" {
-  description = "The ARN of the EC2 instance"
-  value       = aws_instance.blog.arn
-}
-
-output "instance_public_ip" {
-  description = "The public IP address of the instance"
-  value       = aws_instance.blog.public_ip
-}
-
-output "instance_private_ip" {
-  description = "The private IP address of the instance"
-  value       = aws_instance.blog.private_ip
-}
-
-output "instance_az" {
-  description = "The availability zone of the instance"
-  value       = aws_instance.blog.availability_zone
-}
 
 output "security_group_id" {
   description = "The ID of the security group"
   value       = module.blog_sg.security_group_id
 }
 
-output "instance_public_dns" {
-  description = "The public DNS name of the EC2 instance"
-  value       = aws_instance.blog.public_dns
-}
-
 output "alb_dns_name" {
   description = "The DNS name of the ALB"
-  value       = module.alb.dns_name
+  value       = module.blog_alb.dns_name
+}
+
+output "autoscaling_group_name" {
+  description = "Name of the Auto Scaling Group"
+  value       = module.blog_autoscaling.autoscaling_group_name
 }

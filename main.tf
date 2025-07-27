@@ -53,20 +53,30 @@ data "aws_ami" "app_ami" {
   owners = ["979382823631"] # Bitnami
 }
 
-# EC2 instance
-resource "aws_instance" "blog" {
-  ami                         = data.aws_ami.app_ami.id
-  instance_type               = var.instance_type
-  subnet_id                   = module.blog_vpc.public_subnets[0]
-  associate_public_ip_address = true
-  vpc_security_group_ids      = [module.blog_sg.security_group_id]
+module "blog_autoscaling" {
+  source  = "terraform-aws-modules/autoscaling/aws"
+  version = "9.6.0"
 
-  tags = {
+  name                = "blog_asg"
+  min_size            = 1
+  max_size            = 1
+  
+  vpc_zone_identifier = module.blog_vpc.public_subnets
+
+  launch_template = {
+    name_prefix               = "blog-"
+    image_id                  = data.aws_ami.app_ami.id
+    instance_type             = var.instance_type
+
+    vpc_security_group_ids    = [module.blog_sg.security_group_id]
+  }
+
+   tags = {
     Name = "HelloWorld"
   }
 }
 
-module "alb" { 
+module "blog_alb" { 
   source = "terraform-aws-modules/alb/aws"
   version = "9.6.0"
 
@@ -91,7 +101,10 @@ module "alb" {
       protocol    = "HTTP"
       port        = 80
       target_type = "instance"
-      target_id   = aws_instance.blog.id
+      
+      target_autoscaling_group = {
+        name = module.autoscaling.autoscaling_group_name
+      }
     }
   }
 
