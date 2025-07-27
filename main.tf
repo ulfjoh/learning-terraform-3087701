@@ -1,5 +1,3 @@
-# main.tf
-
 # VPC using official module
 module "blog_vpc" {
   source  = "terraform-aws-modules/vpc/aws"
@@ -63,6 +61,7 @@ resource "aws_launch_template" "blog" {
 
   tag_specifications {
     resource_type = "instance"
+
     tags = {
       Name = "HelloWorld"
     }
@@ -98,8 +97,6 @@ module "blog_alb" {
   subnets         = module.blog_vpc.public_subnets
   security_groups = [module.blog_sg.security_group_id]
 
-  create_target_group_attachments = false  # ✅ Prevents target_id errors
-
   listeners = {
     http = {
       port     = 80
@@ -115,17 +112,18 @@ module "blog_alb" {
       name_prefix = "blog-"
       protocol    = "HTTP"
       port        = 80
-      target_type = "instance"  # You can leave this as "instance", it's okay
+      target_type = "instance"
+
+      targets = {
+        my_asg = {
+          type = "autoscaling_group"
+          name = module.blog_autoscaling.autoscaling_group_name
+        }
+      }
     }
   }
 
   tags = {
     Environment = "dev"
   }
-}
-
-# Attach ASG to ALB target group
-resource "aws_autoscaling_attachment" "asg_attachment" {
-  autoscaling_group_name = module.blog_autoscaling.autoscaling_group_name
-  lb_target_group_arn    = module.blog_alb.target_groups["instance"].arn
 }
