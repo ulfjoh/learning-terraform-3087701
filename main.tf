@@ -1,5 +1,3 @@
-# VPC + EC2 with Modules
-
 # VPC using official module
 module "blog_vpc" {
   source  = "terraform-aws-modules/vpc/aws"
@@ -8,8 +6,8 @@ module "blog_vpc" {
   name = "dev"
   cidr = "10.0.0.0/16"
 
-  azs             = ["us-west-2a", "us-west-2b", "us-west-2c"]
-  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+  azs            = ["us-west-2a", "us-west-2b", "us-west-2c"]
+  public_subnets = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
 
   tags = {
     Terraform   = "true"
@@ -17,7 +15,7 @@ module "blog_vpc" {
   }
 }
 
-# Security group
+# Security Group using official module
 module "blog_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "5.3.0"
@@ -36,7 +34,7 @@ module "blog_sg" {
   }
 }
 
-# AMI lookup
+# AMI Lookup - Bitnami Tomcat
 data "aws_ami" "app_ami" {
   most_recent = true
 
@@ -53,14 +51,14 @@ data "aws_ami" "app_ami" {
   owners = ["979382823631"] # Bitnami
 }
 
+# Auto Scaling Group using module v7.6.0
 module "blog_autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
-  version = "9.0.1"
+  version = "7.6.0"
 
   name                = "blog_asg"
   min_size            = 1
   max_size            = 1
-  
   vpc_zone_identifier = module.blog_vpc.public_subnets
 
   launch_template = {
@@ -70,13 +68,14 @@ module "blog_autoscaling" {
     vpc_security_group_ids = [module.blog_sg.security_group_id]
   }
 
-   tags = {
+  tags = {
     Name = "HelloWorld"
   }
 }
 
-module "blog_alb" { 
-  source = "terraform-aws-modules/alb/aws"
+# Application Load Balancer
+module "blog_alb" {
+  source  = "terraform-aws-modules/alb/aws"
   version = "9.6.0"
 
   name            = "blog-alb"
@@ -100,7 +99,7 @@ module "blog_alb" {
       protocol    = "HTTP"
       port        = 80
       target_type = "instance"
-      
+
       target_autoscaling_group = {
         name = module.blog_autoscaling.autoscaling_group_name
       }
