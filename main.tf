@@ -125,5 +125,5 @@ module "blog_alb" {
 # Attach ASG to ALB target group
 resource "aws_autoscaling_attachment" "asg_attachment" {
   autoscaling_group_name = module.blog_autoscaling.autoscaling_group_name
-  lb_target_group_arn    = module.blog_alb.target_group_arns[0]
+  lb_target_group_arn    = module.blog_alb.target_groups["instance"].arn
 }
