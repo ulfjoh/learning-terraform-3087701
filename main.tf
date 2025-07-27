@@ -111,9 +111,8 @@ module "blog_alb" {
     name_prefix = "blog-"
     protocol    = "HTTP"
     port        = 80
-    target_type = "instance"
+    target_type = "ip"  # ← change this from "instance" to "ip"
 
-    #The right way to attach ASG
     targets = {
       asg = {
         type = "autoscaling_group"
@@ -122,6 +121,7 @@ module "blog_alb" {
     }
   }
 }
+
   tags = {
     Environment = "dev"
   }
