@@ -10,5 +10,5 @@ output "autoscaling_group_name" {
 
 output "alb_dns_name" {
   description = "The DNS name of the ALB"
-  value       = module.blog_alb.alb_dns_name
+  value       = module.blog_alb.this_lb[0].dns_name
 }

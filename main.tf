@@ -1,6 +1,6 @@
-# main.tf (Terraform 1.12.2 compatible, using autoscaling v9.0.1 and alb v9.6.0)
+# main.tf
 
-# VPC Module
+# VPC using official module
 module "blog_vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.1.2"
@@ -17,7 +17,7 @@ module "blog_vpc" {
   }
 }
 
-# Security Group
+# Security Group using official module
 module "blog_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "5.3.0"
@@ -36,7 +36,7 @@ module "blog_sg" {
   }
 }
 
-# AMI Lookup
+# AMI Lookup - Bitnami Tomcat
 data "aws_ami" "app_ami" {
   most_recent = true
 
@@ -63,14 +63,13 @@ resource "aws_launch_template" "blog" {
 
   tag_specifications {
     resource_type = "instance"
-
     tags = {
       Name = "HelloWorld"
     }
   }
 }
 
-# Auto Scaling
+# Auto Scaling Group using official module v9.0.1
 module "blog_autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
   version = "9.0.1"
@@ -99,12 +98,14 @@ module "blog_alb" {
   subnets         = module.blog_vpc.public_subnets
   security_groups = [module.blog_sg.security_group_id]
 
+  enable_deletion_protection = false
+
   target_groups = {
-    asg = {
+    blog_asg = {
       name_prefix = "blog-"
-      protocol    = "HTTP"
-      port        = 80
-      target_type = "instance"
+      backend_protocol = "HTTP"
+      backend_port     = 80
+      target_type      = "instance"
     }
   }
 
@@ -113,20 +114,20 @@ module "blog_alb" {
   }
 }
 
-# ALB Listener
+# Listener
 resource "aws_lb_listener" "http" {
-  load_balancer_arn = module.blog_alb.load_balancers["blog-alb"].arn
+  load_balancer_arn = module.blog_alb.this_lb[0].arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
     type             = "forward"
-    target_group_arn = module.blog_alb.target_groups["asg"].arn
+    target_group_arn = module.blog_alb.this_target_group["blog_asg"].arn
   }
 }
 
-# Attach Auto Scaling Group to ALB Target Group
+# Attach ASG to Target Group
 resource "aws_autoscaling_attachment" "asg_attachment" {
   autoscaling_group_name = module.blog_autoscaling.autoscaling_group_name
-  lb_target_group_arn    = module.blog_alb.target_groups["asg"].arn
+  lb_target_group_arn    = module.blog_alb.this_target_group["blog_asg"].arn
 }
