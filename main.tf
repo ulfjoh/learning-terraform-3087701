@@ -1,4 +1,6 @@
-# VPC
+# main.tf
+
+# VPC using official module
 module "blog_vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.1.2"
@@ -15,7 +17,7 @@ module "blog_vpc" {
   }
 }
 
-# Security Group
+# Security Group using official module
 module "blog_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "5.3.0"
@@ -34,7 +36,7 @@ module "blog_sg" {
   }
 }
 
-# AMI Lookup
+# AMI Lookup - Bitnami Tomcat
 data "aws_ami" "app_ami" {
   most_recent = true
 
@@ -48,7 +50,7 @@ data "aws_ami" "app_ami" {
     values = ["hvm"]
   }
 
-  owners = ["979382823631"]
+  owners = ["979382823631"] # Bitnami
 }
 
 # Launch Template
@@ -73,47 +75,44 @@ module "blog_autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
   version = "9.0.1"
 
-  name                     = "blog_asg"
-  min_size                 = 1
-  max_size                 = 1
-  desired_capacity         = 1
-  vpc_zone_identifier      = module.blog_vpc.public_subnets
-  create_launch_template   = false
-  launch_template_name     = aws_launch_template.blog.name
+  name                = "blog_asg"
+  min_size            = 1
+  max_size            = 1
+  desired_capacity    = 1
+  vpc_zone_identifier = module.blog_vpc.public_subnets
+
+  create_launch_template = false
+  launch_template_name   = aws_launch_template.blog.name
 
   tags = {
     Name = "HelloWorld"
   }
 }
 
-# ALB
+# Application Load Balancer
 module "blog_alb" {
   source  = "terraform-aws-modules/alb/aws"
   version = "9.6.0"
 
   name            = "blog-alb"
-  load_balancer_type = "application"
   vpc_id          = module.blog_vpc.vpc_id
   subnets         = module.blog_vpc.public_subnets
   security_groups = [module.blog_sg.security_group_id]
 
-  target_groups = [
-    {
-      name_prefix   = "blog-"
+  target_groups = {
+    asg = {
+      name_prefix = "blog-"
       backend_protocol = "HTTP"
       backend_port     = 80
       target_type      = "instance"
     }
-  ]
-
-  create_listener = false
+  }
 
   tags = {
     Environment = "dev"
   }
 }
 
-# ALB Listener
 resource "aws_lb_listener" "http" {
   load_balancer_arn = module.blog_alb.lb_arn
   port              = 80
@@ -121,12 +120,11 @@ resource "aws_lb_listener" "http" {
 
   default_action {
     type             = "forward"
-    target_group_arn = module.blog_alb.target_group_arns[0]
+    target_group_arn = module.blog_alb.target_group_arns["asg"]
   }
 }
 
-# Attach ASG to Target Group
 resource "aws_autoscaling_attachment" "asg_attachment" {
   autoscaling_group_name = module.blog_autoscaling.autoscaling_group_name
-  lb_target_group_arn    = module.blog_alb.target_group_arns[0]
+  lb_target_group_arn    = module.blog_alb.target_group_arns["asg"]
 }
