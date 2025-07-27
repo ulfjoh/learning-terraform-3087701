@@ -6,8 +6,8 @@ module "blog_vpc" {
   name = "dev"
   cidr = "10.0.0.0/16"
 
-  azs            = ["us-west-2a", "us-west-2b", "us-west-2c"]
-  public_subnets = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+  azs             = ["us-west-2a", "us-west-2b", "us-west-2c"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
 
   tags = {
     Terraform   = "true"
@@ -15,7 +15,7 @@ module "blog_vpc" {
   }
 }
 
-# Security Group using official module
+# Security group
 module "blog_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "5.3.0"
@@ -34,7 +34,7 @@ module "blog_sg" {
   }
 }
 
-# AMI Lookup - Bitnami Tomcat
+# AMI lookup (Bitnami Tomcat)
 data "aws_ami" "app_ami" {
   most_recent = true
 
@@ -51,7 +51,7 @@ data "aws_ami" "app_ami" {
   owners = ["979382823631"] # Bitnami
 }
 
-# Launch Template
+# Launch template
 resource "aws_launch_template" "blog" {
   name_prefix   = "blog-"
   image_id      = data.aws_ami.app_ami.id
@@ -61,23 +61,22 @@ resource "aws_launch_template" "blog" {
 
   tag_specifications {
     resource_type = "instance"
-
     tags = {
       Name = "HelloWorld"
     }
   }
 }
 
+# Auto Scaling Group using launch template (v9.0.1)
 module "blog_autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
   version = "9.0.1"
 
-  name                = "blog_asg"
-  min_size            = 1
-  max_size            = 1
-  desired_capacity    = 1
-  vpc_zone_identifier = module.blog_vpc.public_subnets
-
+  name                   = "blog-asg"
+  min_size               = 1
+  max_size               = 1
+  desired_capacity       = 1
+  vpc_zone_identifier    = module.blog_vpc.public_subnets
   create_launch_template = false
   launch_template_name   = aws_launch_template.blog.name
 
@@ -86,10 +85,10 @@ module "blog_autoscaling" {
   }
 }
 
-# Application Load Balancer
+# Application Load Balancer (v8.6.0)
 module "blog_alb" {
   source  = "terraform-aws-modules/alb/aws"
-  version = "9.6.0"
+  version = "8.6.0"
 
   name            = "blog-alb"
   vpc_id          = module.blog_vpc.vpc_id
@@ -107,20 +106,17 @@ module "blog_alb" {
   }
 
   target_groups = {
-  instance = {
-    name_prefix = "blog-"
-    protocol    = "HTTP"
-    port        = 80
-    target_type = "ip"  # ← change this from "instance" to "ip"
+    instance = {
+      name_prefix = "blog-"
+      protocol    = "HTTP"
+      port        = 80
+      target_type = "instance"
 
-    targets = {
-      asg = {
-        type = "autoscaling_group"
+      target_autoscaling_group = {
         name = module.blog_autoscaling.autoscaling_group_name
       }
     }
   }
-}
 
   tags = {
     Environment = "dev"
