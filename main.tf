@@ -63,11 +63,12 @@ module "blog_autoscaling" {
   
   vpc_zone_identifier = module.blog_vpc.public_subnets
 
-  create_launch_template                  = true
-  launch_template_name                    = "blog-launch-template"
-  launch_template_image_id                = data.aws_ami.app_ami.id
-  launch_template_instance_type           = var.instance_type
-  launch_template_vpc_security_group_ids  = [module.blog_sg.security_group_id]
+  launch_template = {
+    name_prefix            = "blog-"
+    image_id               = data.aws_ami.app_ami.id
+    instance_type          = var.instance_type
+    vpc_security_group_ids = [module.blog_sg.security_group_id]
+  }
 
    tags = {
     Name = "HelloWorld"
