@@ -55,7 +55,7 @@ data "aws_ami" "app_ami" {
 resource "aws_launch_template" "blog" {
   name_prefix   = "blog-"
   image_id      = data.aws_ami.app_ami.id
-  instance_type = "t3.micro"
+  instance_type = var.instance_type
 
   vpc_security_group_ids = [module.blog_sg.security_group_id]
 
@@ -107,18 +107,21 @@ module "blog_alb" {
   }
 
   target_groups = {
-    instance = {
-      name_prefix = "blog-"
-      protocol    = "HTTP"
-      port        = 80
-      target_type = "instance"
+  instance = {
+    name_prefix = "blog-"
+    protocol    = "HTTP"
+    port        = 80
+    target_type = "instance"
 
-      target_autoscaling_group = {
+    #The right way to attach ASG
+    targets = {
+      asg = {
+        type = "autoscaling_group"
         name = module.blog_autoscaling.autoscaling_group_name
       }
     }
   }
-
+}
   tags = {
     Environment = "dev"
   }
