@@ -51,7 +51,7 @@ data "aws_ami" "app_ami" {
   owners = ["979382823631"] # Bitnami
 }
 
-# Launch Template
+# Launch Template (external to module)
 resource "aws_launch_template" "blog" {
   name_prefix   = "blog-"
   image_id      = data.aws_ami.app_ami.id
@@ -68,7 +68,7 @@ resource "aws_launch_template" "blog" {
   }
 }
 
-# Auto Scaling Group
+# Auto Scaling Group using v9.0.1 module (referencing external launch template)
 module "blog_autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
   version = "9.0.1"
@@ -97,33 +97,37 @@ module "blog_alb" {
   subnets         = module.blog_vpc.public_subnets
   security_groups = [module.blog_sg.security_group_id]
 
-  listeners = {
-    http = {
-      port     = 80
-      protocol = "HTTP"
-      forward = {
-        target_group_key = "instance"
-      }
-    }
-  }
+  load_balancer_type = "application"
 
-  target_groups = {
-    instance = {
+  http_tcp_listeners = [
+    {
+      port            = 80
+      protocol        = "HTTP"
+      target_group_index = 0
+    }
+  ]
+
+  target_groups = [
+    {
       name_prefix = "blog-"
-      protocol    = "HTTP"
-      port        = 80
-      target_type = "instance"
-
-      targets = {
-        my_asg = {
-          type = "autoscaling_group"
-          name = module.blog_autoscaling.autoscaling_group_name
-        }
-      }
+      backend_protocol = "HTTP"
+      backend_port     = 80
+      target_type      = "instance"
     }
-  }
+  ]
 
   tags = {
     Environment = "dev"
   }
+}
+
+# Attach ASG to Target Group manually
+resource "aws_autoscaling_attachment" "asg_attachment" {
+  autoscaling_group_name = module.blog_autoscaling.autoscaling_group_name
+  lb_target_group_arn    = module.blog_alb.target_group_arns[0]
+}
+
+# Data block to support output of ALB DNS name
+data "aws_lb" "blog_alb" {
+  name = "blog-alb"
 }
