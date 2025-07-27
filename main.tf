@@ -51,22 +51,20 @@ data "aws_ami" "app_ami" {
   owners = ["979382823631"] # Bitnami
 }
 
-# Auto Scaling Group using module v7.6.0
 module "blog_autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
-  version = "8.6.0"
+  version = "7.6.0"
 
   name                = "blog_asg"
   min_size            = 1
   max_size            = 1
   vpc_zone_identifier = module.blog_vpc.public_subnets
 
-  launch_template = {
-    name_prefix            = "blog-"
-    image_id               = data.aws_ami.app_ami.id
-    instance_type          = var.instance_type
-    vpc_security_group_ids = [module.blog_sg.security_group_id]
-  }
+  create_launch_template                  = true
+  launch_template_name                    = "blog-launch-template"
+  launch_template_image_id                = data.aws_ami.app_ami.id
+  launch_template_instance_type           = var.instance_type
+  launch_template_vpc_security_group_ids  = [module.blog_sg.security_group_id]
 
   tags = {
     Name = "HelloWorld"
