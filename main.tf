@@ -98,14 +98,7 @@ module "blog_alb" {
   subnets         = module.blog_vpc.public_subnets
   security_groups = [module.blog_sg.security_group_id]
 
-  target_groups = {
-    instance = {
-      name_prefix = "blog-"
-      protocol    = "HTTP"
-      port        = 80
-      target_type = "instance"
-    }
-  }
+  create_target_group_attachments = false  # ✅ Prevents target_id errors
 
   listeners = {
     http = {
@@ -114,6 +107,15 @@ module "blog_alb" {
       forward = {
         target_group_key = "instance"
       }
+    }
+  }
+
+  target_groups = {
+    instance = {
+      name_prefix = "blog-"
+      protocol    = "HTTP"
+      port        = 80
+      target_type = "instance"  # You can leave this as "instance", it's okay
     }
   }
 
