@@ -5,7 +5,7 @@ output "security_group_id" {
 
 output "alb_dns_name" {
   description = "The DNS name of the ALB"
-  value       = module.blog_alb.this_lb[0].dns_name  # ✅ Accessing actual ALB DNS
+  value       = data.aws_lb.blog_alb.dns_name
 }
 
 output "autoscaling_group_name" {
