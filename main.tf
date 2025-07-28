@@ -1,4 +1,4 @@
-# VPC
+# --- VPC Module ---
 module "blog_vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.1.2"
@@ -15,7 +15,7 @@ module "blog_vpc" {
   }
 }
 
-# Security Group
+# --- Security Group Module ---
 module "blog_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "5.3.0"
@@ -34,7 +34,7 @@ module "blog_sg" {
   }
 }
 
-# Lookup AMI (Bitnami Tomcat)
+# --- Bitnami Tomcat AMI Lookup ---
 data "aws_ami" "app_ami" {
   most_recent = true
 
@@ -51,7 +51,7 @@ data "aws_ami" "app_ami" {
   owners = ["979382823631"] # Bitnami
 }
 
-# Launch Template (manual)
+# --- Launch Template ---
 resource "aws_launch_template" "blog" {
   name_prefix   = "blog-"
   image_id      = data.aws_ami.app_ami.id
@@ -68,21 +68,70 @@ resource "aws_launch_template" "blog" {
   }
 }
 
-# Autoscaling Group using module v9.0.1
-module "blog_autoscaling" {
-  source  = "terraform-aws-modules/autoscaling/aws"
-  version = "9.0.1"
-
-  name                  = "blog_asg"
-  min_size              = 1
-  max_size              = 1
-  desired_capacity      = 1
-  vpc_zone_identifier   = module.blog_vpc.public_subnets
-
-  create_launch_template = false
-  launch_template_name   = aws_launch_template.blog.name
+# --- ALB ---
+resource "aws_lb" "blog_alb" {
+  name               = "blog-alb"
+  load_balancer_type = "application"
+  subnets            = module.blog_vpc.public_subnets
+  security_groups    = [module.blog_sg.security_group_id]
+  enable_deletion_protection = false
 
   tags = {
-    Name = "HelloWorld"
+    Environment = "dev"
+  }
+}
+
+resource "aws_lb_target_group" "blog_tg" {
+  name     = "blog-tg"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = module.blog_vpc.vpc_id
+  target_type = "instance"
+
+  health_check {
+    path                = "/"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 2
+    matcher             = "200-299"
+  }
+}
+
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.blog_alb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.blog_tg.arn
+  }
+}
+
+# --- Autoscaling Group (manual) ---
+resource "aws_autoscaling_group" "blog_asg" {
+  name                      = "blog-asg"
+  max_size                  = 1
+  min_size                  = 1
+  desired_capacity          = 1
+  vpc_zone_identifier       = module.blog_vpc.public_subnets
+  health_check_type         = "EC2"
+
+  launch_template {
+    id      = aws_launch_template.blog.id
+    version = "$Latest"
+  }
+
+  target_group_arns = [aws_lb_target_group.blog_tg.arn]
+
+  tag {
+    key                 = "Name"
+    value               = "HelloWorld"
+    propagate_at_launch = true
+  }
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
