@@ -112,8 +112,8 @@ resource "aws_lb_listener" "http" {
 # --- Autoscaling Group (manual) ---
 resource "aws_autoscaling_group" "blog_asg" {
   name                      = "blog-asg"
-  max_size                  = var.max_size
-  min_size                  = var.min_size
+  max_size                  = var.asg_max
+  min_size                  = var.asg_min
   desired_capacity          = 1
   vpc_zone_identifier       = module.blog_vpc.public_subnets
   health_check_type         = "EC2"
