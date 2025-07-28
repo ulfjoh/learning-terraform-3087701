@@ -20,7 +20,7 @@ module "blog_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "5.3.0"
 
-  name   = "blog_module"
+  name   = "${var.environment.name}-blog_module"
   vpc_id = module.blog_vpc.vpc_id
 
   ingress_rules       = ["http-80-tcp", "https-443-tcp"]
@@ -53,7 +53,7 @@ data "aws_ami" "app_ami" {
 
 # --- Launch Template ---
 resource "aws_launch_template" "blog" {
-  name_prefix   = "blog-"
+  name_prefix   = "${var.environment.name}-blog-"
   image_id      = data.aws_ami.app_ami.id
   instance_type = var.instance_type
 
@@ -70,7 +70,7 @@ resource "aws_launch_template" "blog" {
 
 # --- ALB ---
 resource "aws_lb" "blog_alb" {
-  name               = "blog-alb"
+  name               = "${var.environment.name}-blog-alb"
   load_balancer_type = "application"
   subnets            = module.blog_vpc.public_subnets
   security_groups    = [module.blog_sg.security_group_id]
@@ -82,7 +82,7 @@ resource "aws_lb" "blog_alb" {
 }
 
 resource "aws_lb_target_group" "blog_tg" {
-  name     = "blog-tg"
+  name     = "${var.environment.name}-blog-tg"
   port     = 80
   protocol = "HTTP"
   vpc_id   = module.blog_vpc.vpc_id
@@ -111,7 +111,7 @@ resource "aws_lb_listener" "http" {
 
 # --- Autoscaling Group (manual) ---
 resource "aws_autoscaling_group" "blog_asg" {
-  name                      = "blog-asg"
+  name                      = "${var.environment.name}-blog-asg"
   max_size                  = var.asg_max
   min_size                  = var.asg_min
   desired_capacity          = 1
