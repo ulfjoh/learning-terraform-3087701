@@ -5,7 +5,7 @@ output "security_group_id" {
 
 output "alb_dns_name" {
   description = "The DNS name of the ALB"
-  value       = aws_lb.blog.dns_name
+  value       = aws_lb.blog_alb.dns_name
 }
 
 output "autoscaling_group_name" {
