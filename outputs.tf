@@ -1,10 +1,10 @@
 output "vpc_id" {
-  description = "The ID of the VPC"
+  description = "The ID of the VPC!"
   value       = module.blog_vpc.vpc_id
 }
 
 output "security_group_id" {
-  description = "The ID of the security group"
+  description = "The ID of the security group!"
   value       = module.blog_sg.security_group_id
 }
 
