@@ -3,15 +3,15 @@ module "blog_vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.1.2"
 
-  name = "dev"
-  cidr = "10.0.0.0/16"
+  name = var.environment.name
+  cidr = "${var.environment.network_prefix}.0.0/16"
 
   azs            = ["us-west-2a", "us-west-2b", "us-west-2c"]
-  public_subnets = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+  public_subnets = ["${var.environment.network_prefix}.101.0/24", "${var.environment.network_prefix}.102.0/24", "${var.environment.network_prefix}.103.0/24"]
 
   tags = {
     Terraform   = "true"
-    Environment = "dev"
+    Environment = var.environment.name
   }
 }
 
@@ -30,7 +30,7 @@ module "blog_sg" {
 
   tags = {
     Terraform   = "true"
-    Environment = "dev"
+    Environment = var.environment.name
   }
 }
 
@@ -77,7 +77,7 @@ resource "aws_lb" "blog_alb" {
   enable_deletion_protection = false
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment.name
   }
 }
 
@@ -112,8 +112,8 @@ resource "aws_lb_listener" "http" {
 # --- Autoscaling Group (manual) ---
 resource "aws_autoscaling_group" "blog_asg" {
   name                      = "blog-asg"
-  max_size                  = 1
-  min_size                  = 1
+  max_size                  = var.max_size
+  min_size                  = var.min_size
   desired_capacity          = 1
   vpc_zone_identifier       = module.blog_vpc.public_subnets
   health_check_type         = "EC2"
