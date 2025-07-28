@@ -1,4 +1,3 @@
-#QA module
 module "qa" {
   source = "../modules/blog"
 
