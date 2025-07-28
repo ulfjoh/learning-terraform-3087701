@@ -68,63 +68,21 @@ resource "aws_launch_template" "blog" {
   }
 }
 
-# Autoscaling Group (with launch template reference)
+# Autoscaling Group using module v9.0.1
 module "blog_autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
   version = "9.0.1"
 
-  name                 = "blog_asg"
-  min_size             = 1
-  max_size             = 1
-  desired_capacity     = 1
-  vpc_zone_identifier  = module.blog_vpc.public_subnets
+  name                  = "blog_asg"
+  min_size              = 1
+  max_size              = 1
+  desired_capacity      = 1
+  vpc_zone_identifier   = module.blog_vpc.public_subnets
 
-  launch_template = {
-    id      = aws_launch_template.blog.id
-    version = "$Latest"
-  }
+  create_launch_template = false
+  launch_template_name   = aws_launch_template.blog.name
 
   tags = {
     Name = "HelloWorld"
   }
-}
-
-# Application Load Balancer (manual)
-resource "aws_lb" "blog_alb" {
-  name               = "blog-alb"
-  internal           = false
-  load_balancer_type = "application"
-  subnets            = module.blog_vpc.public_subnets
-  security_groups    = [module.blog_sg.security_group_id]
-
-  tags = {
-    Environment = "dev"
-  }
-}
-
-# Target Group
-resource "aws_lb_target_group" "blog_tg" {
-  name     = "blog-tg"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = module.blog_vpc.vpc_id
-  target_type = "instance"
-}
-
-# Listener
-resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.blog_alb.arn
-  port              = 80
-  protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.blog_tg.arn
-  }
-}
-
-# Attach ASG to Target Group
-resource "aws_autoscaling_attachment" "asg_attachment" {
-  autoscaling_group_name = module.blog_autoscaling.autoscaling_group_name
-  lb_target_group_arn    = aws_lb_target_group.blog.arn
 }
